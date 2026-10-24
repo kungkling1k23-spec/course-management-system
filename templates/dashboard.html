@@ -1,105 +1,159 @@
 {% extends "base.html" %}
 {% block title %}หน้าจัดการวิชา{% endblock %}
 {% block content %}
-<!-- Cards Stats -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm text-center">
-        <p class="text-xs text-slate-500">จำนวนวิชาทั้งหมด</p>
-        <p class="text-2xl font-bold text-indigo-600 mt-1">{{ stats.total }}</p>
-    </div>
-    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm text-center">
-        <p class="text-xs text-slate-500">หน่วยกิตรวม</p>
-        <p class="text-2xl font-bold text-emerald-600 mt-1">{{ stats.credits }}</p>
-    </div>
-    <div>
-            <label class="block text-xs font-medium text-slate-600">หมวดหมู่ (category) *</label>
-            <select name="category" required class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none bg-white">
-                <option value="" disabled selected>-- เลือกหมวดหมู่รายวิชา --</option>
-                <option value="หมวดวิชาศึกษาทั่วไป">หมวดวิชาศึกษาทั่วไป</option>
-                <option value="หมวดวิชาแกน">หมวดวิชาแกน</option>
-                <option value="หมวดวิชาเลือก">หมวดวิชาเลือก</option>
-            </select>
-        </div>
 
-<div class="grid md:grid-cols-3 gap-6">
-    <!-- Form เพิ่มรายวิชา -->
+<!-- ส่วนแสดงสถิติ (Stats Cards) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div>
+            <p class="text-sm font-medium text-slate-500">จำนวนหลักสูตรทั้งหมด</p>
+            <p class="text-3xl font-bold text-indigo-600 mt-1">{{ stats.total }} <span class="text-sm font-normal text-slate-400">วิชา</span></p>
+        </div>
+        <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 text-xl">
+            <i class="fa-solid fa-book"></i>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div>
+            <p class="text-sm font-medium text-slate-500">ชั่วโมงเรียนรวม</p>
+            <p class="text-3xl font-bold text-emerald-600 mt-1">{{ stats.hours }} <span class="text-sm font-normal text-slate-400">ชม.</span></p>
+        </div>
+        <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 text-xl">
+            <i class="fa-solid fa-clock"></i>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+        <div>
+            <p class="text-sm font-medium text-slate-500">หน่วยกิตรวม</p>
+            <p class="text-3xl font-bold text-blue-600 mt-1">{{ stats.credits }} <span class="text-sm font-normal text-slate-400">นก.</span></p>
+        </div>
+        <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 text-xl">
+            <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+    </div>
+</div>
+
+<!-- ส่วนเนื้อหาหลัก: ฟอร์มเพิ่มข้อมูล (ซ้าย) และ รายการวิชา (ขวา) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- ฟอร์มเพิ่มรายวิชา (กินพื้นที่ 1 ส่วน) -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
-        <h3 class="text-lg font-bold text-slate-800 mb-4"><i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>เพิ่มรายวิชาใหม่</h3>
-        <form action="/course/add" method="POST" class="space-y-3">
+        <h3 class="text-lg font-bold text-slate-800 mb-5 flex items-center">
+            <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mr-2 text-sm">
+                <i class="fa-solid fa-plus"></i>
+            </span>
+            เพิ่มรายวิชาใหม่
+        </h3>
+        <form action="/course/add" method="POST" class="space-y-4">
             <div>
-                <label class="block text-xs font-medium text-slate-600">รหัสวิชา *</label>
-                <input type="text" name="code" placeholder="เช่น CS101" required class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสวิชา (course_code) *</label>
+                <input type="text" name="course_code" placeholder="เช่น 04-00-101" required 
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">
             </div>
+
             <div>
-                <label class="block text-xs font-medium text-slate-600">ชื่อรายวิชา *</label>
-                <input type="text" name="name" placeholder="เช่น Programming I" required class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อรายวิชา (course_name) *</label>
+                <input type="text" name="course_name" placeholder="เช่น หลักการตลาด" required 
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">
             </div>
-            <div class="grid grid-cols-2 gap-2">
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">หมวดหมู่ (category) *</label>
+                <select name="category" required 
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                    <option value="" disabled selected>-- เลือกหมวดหมู่รายวิชา --</option>
+                    <option value="หมวดวิชาศึกษาทั่วไป">หมวดวิชาศึกษาทั่วไป</option>
+                    <option value="หมวดวิชาแกน">หมวดวิชาแกน</option>
+                    <option value="หมวดวิชาเลือก">หมวดวิชาเลือก</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-xs font-medium text-slate-600">หมวดหมู่</label>
-                    <select name="category" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
-                        <option value="วิชาบังคับ">วิชาบังคับ</option>
-                        <option value="วิชาเลือก">วิชาเลือก</option>
-                        <option value="หมวดศึกษาทั่วไป">หมวดศึกษาทั่วไป</option>
-                    </select>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">สถาบัน/ระบบ</label>
+                    <input type="text" name="institution" placeholder="ThaiMOOC" 
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-600">หน่วยกิต *</label>
-                    <input type="number" name="credits" min="1" max="6" value="3" required class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">หน่วยกิต *</label>
+                    <input type="number" name="credits" min="1" max="6" value="3" required 
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">
                 </div>
             </div>
+
             <div>
-                <label class="block text-xs font-medium text-slate-600">ผู้สอน</label>
-                <input type="text" name="instructor" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">บทเรียนออนไลน์ (online_lesson)</label>
+                <input type="text" name="online_lesson" placeholder="ชื่อบทเรียนออนไลน์" 
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">
             </div>
+
             <div>
-                <label class="block text-xs font-medium text-slate-600">ภาคเรียน/ปีการศึกษา</label>
-                <input type="text" name="semester" placeholder="เช่น 1/2567" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">ชั่วโมงเรียน (hours)</label>
+                <input type="number" name="hours" placeholder="เช่น 15" 
+                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">
             </div>
-            <div>
-                <label class="block text-xs font-medium text-slate-600">คำอธิบาย</label>
-                <textarea name="description" rows="2" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none"></textarea>
-            </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium text-sm hover:bg-indigo-700 transition">บันทึกวิชา</button>
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold text-sm shadow-lg shadow-indigo-100 transition duration-200 mt-2">
+                <i class="fa-solid fa-save mr-1"></i> บันทึกข้อมูลลงฐานข้อมูล
+            </button>
         </form>
     </div>
 
-    <!-- รายการวิชา -->
-    <div class="md:col-span-2 space-y-4">
-        <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-list text-indigo-600 mr-2"></i>รายการวิชาของคุณ</h3>
+    <!-- รายการวิชาในระบบ (กินพื้นที่ 2 ส่วน) -->
+    <div class="lg:col-span-2 space-y-4">
+        <h3 class="text-lg font-bold text-slate-800 flex items-center justify-between">
+            <span><i class="fa-solid fa-list text-indigo-600 mr-2"></i>รายการวิชาของคุณ</span>
+            <span class="text-xs font-normal bg-slate-200 text-slate-700 px-3 py-1 rounded-full">{{ courses|length }} รายการ</span>
+        </h3>
+
         {% if courses %}
-            <div class="space-y-3">
+            <div class="grid grid-cols-1 gap-3">
             {% for course in courses %}
-                <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
-                    <div class="flex justify-between items-start">
+                <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between">
+                    <div class="flex justify-between items-start gap-4">
                         <div>
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">{{ course.code }}</span>
-                            <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 ml-1">{{ course.category }}</span>
-                            <h4 class="font-bold text-slate-800 text-base mt-1">{{ course.name }}</h4>
+                            <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600">{{ course.course_code }}</span>
+                                <span class="text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">{{ course.category }}</span>
+                                {% if course.institution %}
+                                <span class="text-xs font-medium px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600">{{ course.institution }}</span>
+                                {% endif %}
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-lg">{{ course.course_name }}</h4>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2 py-1 rounded-md">{{ course.credits }} หน่วยกิต</span>
-                            <form action="/course/delete/{{ course.id }}" method="POST" onsubmit="return confirm('ยืนยันการลบวิชานี้?');">
-                                <button type="submit" class="text-rose-500 hover:text-rose-700 text-sm px-2 py-1"><i class="fa-solid fa-trash"></i></button>
+                        <div class="flex items-center gap-3">
+                            <div class="text-right">
+                                <span class="text-xs font-bold block bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg">{{ course.credits }} หน่วยกิต</span>
+                                <span class="text-xs text-slate-400 mt-1 block">{{ course.hours }} ชั่วโมง</span>
+                            </div>
+                            <form action="/course/delete/{{ course.id }}" method="POST" onsubmit="return confirm('ยืนยันการลบวิชานี้ออกจากฐานข้อมูล?');">
+                                <button type="submit" class="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-700 flex items-center justify-center transition" title="ลบวิชานี้">
+                                    <i class="fa-solid fa-trash text-sm"></i>
+                                </button>
                             </form>
                         </div>
                     </div>
-                    {% if course.instructor or course.semester or course.description %}
-                    <div class="mt-3 text-xs text-slate-500 space-y-1 border-t pt-2 border-slate-50">
-                        {% if course.instructor %}<p><i class="fa-solid fa-user-tie mr-1"></i> {{ course.instructor }}</p>{% endif %}
-                        {% if course.semester %}<p><i class="fa-regular fa-calendar mr-1"></i> {{ course.semester }}</p>{% endif %}
-                        {% if course.description %}<p class="text-slate-600 italic">{{ course.description }}</p>{% endif %}
+                    {% if course.online_lesson %}
+                    <div class="mt-4 text-xs text-slate-500 border-t border-slate-50 pt-3 flex items-center">
+                        <i class="fa-solid fa-chalkboard-user text-indigo-500 mr-2"></i> 
+                        <span>บทเรียน: <strong class="text-slate-700">{{ course.online_lesson }}</strong></span>
                     </div>
                     {% endif %}
                 </div>
             {% endfor %}
             </div>
         {% else %}
-            <div class="bg-white p-8 rounded-xl text-center border border-dashed border-slate-200 text-slate-400">
-                <i class="fa-solid fa-folder-open text-3xl mb-2"></i>
-                <p>ยังไม่มีรายการวิชาที่บันทึกไว้</p>
+            <div class="bg-white p-12 rounded-2xl text-center border border-dashed border-slate-200 text-slate-400 shadow-sm">
+                <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-slate-300 text-2xl">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <p class="font-medium text-slate-600">ยังไม่มีรายการวิชาที่บันทึกไว้</p>
+                <p class="text-xs text-slate-400 mt-1">เริ่มต้นกรอกข้อมูลจากฟอร์มด้านซ้ายเพื่อเพิ่มรายวิชาแรกของคุณ</p>
             </div>
         {% endif %}
     </div>
 </div>
+
 {% endblock %}
