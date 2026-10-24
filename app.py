@@ -135,23 +135,23 @@ def add_course():
     if 'user_id' not in session:
         return redirect(url_for('login'))
         
-    code = request.form['code'].strip()
-    name = request.form['name'].strip()
-    category = request.form['category']
-    credits = int(request.form['credits'])
-    instructor = request.form.get('instructor', '').strip()
-    semester = request.form.get('semester', '').strip()
-    description = request.form.get('description', '').strip()
+    course_code = request.form['course_code'].strip()
+    course_name = request.form['course_name'].strip()
+    category = request.form.get('category', '').strip()
+    institution = request.form.get('institution', '').strip()
+    online_lesson = request.form.get('online_lesson', '').strip()
+    hours = int(request.form['hours']) if request.form.get('hours') else 0
+    credits = int(request.form['credits']) if request.form.get('credits') else 0
     
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO courses (user_id, code, name, category, credits, instructor, semester, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (session['user_id'], code, name, category, credits, instructor, semester, description))
+        INSERT INTO course (course_code, course_name, category, institution, online_lesson, hours, credits)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ''', (course_code, course_name, category, institution, online_lesson, hours, credits))
     conn.commit()
     
-    flash('เพิ่มรายวิชาเรียบร้อยแล้ว', 'success')
+    flash('เพิ่มรายวิชาลงในฐานข้อมูลเรียบร้อยแล้ว', 'success')
     return redirect(url_for('index'))
 
 @app.route('/course/edit/<int:course_id>', methods=['POST'])
