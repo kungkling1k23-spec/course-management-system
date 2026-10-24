@@ -161,7 +161,7 @@ def add_course():
         # บันทึกข้อมูลลงตาราง course
         cursor.execute('''
             INSERT INTO course (user_id, course_code, course_name, category, institution, online_lesson, hours, credits)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (user_id, course_code, course_name, category, institution, online_lesson, hours, credits))
         
         conn.commit()
