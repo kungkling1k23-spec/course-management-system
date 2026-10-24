@@ -1,7 +1,12 @@
 import os
-import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from werkzeug.security import generate_password_hash, check_password_hash
+import psycopg2
+import psycopg2.extras
+
+DATABASE_URL = os.environ.get('DATABASE_URL', 'ลิงก์เชื่อมต่อ PostgreSQL ของคุณ')
+
+def get_db():
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    return conn
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key-for-dev')
