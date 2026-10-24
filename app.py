@@ -77,34 +77,26 @@ def index():
 
 # --- Authenication Routes ---
 
-@app.route('/course/add', methods=['POST'])
-def add_course():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password']
         
-    user_id = session['user_id']
-    course_code = request.form['course_code'].strip()
-    course_name = request.form['course_name'].strip()
-    category = request.form.get('category', '').strip()
-    institution = request.form.get('institution', '').strip()
-    
-    # 📌 รับค่าบทเรียนออนไลน์แบบข้อความอิสระ (พิมพ์ได้มากกว่า 1)
-    online_lesson = request.form.get('online_lesson', '').strip()
-    
-    hours = int(request.form['hours']) if request.form['hours'] else 0
-    credits = int(request.form['credits']) if request.form['credits'] else 0
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO course (user_id, course_code, course_name, category, institution, online_lesson, hours, credits)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (user_id, course_code, course_name, category, institution, online_lesson, hours, credits))
-    conn.commit()
-    conn.close()
-    
-    flash('เพิ่มรายวิชาสำเร็จ', 'success')
-    return redirect(url_for('index'))
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+        user = cursor.fetchone()
+        
+        if user and check_password_hash(user['password'], password):
+            session['user_id'] = user['id']
+            session['fullname'] = user['fullname']
+            flash('เข้าสู่ระบบสำเร็จ', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
+            
+    return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
