@@ -21,48 +21,42 @@
     </div>
 </div>
 
-<div class="grid md:grid-cols-3 gap-6">
-    <!-- Form เพิ่มรายวิชา -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
-        <h3 class="text-lg font-bold text-slate-800 mb-4"><i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>เพิ่มรายวิชาใหม่</h3>
-        <form action="/course/add" method="POST" class="space-y-3">
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
+    <h3 class="text-lg font-bold text-slate-800 mb-4"><i class="fa-solid fa-plus-circle text-indigo-600 mr-2"></i>เพิ่มรายวิชาใหม่</h3>
+    <form action="/course/add" method="POST" class="space-y-3">
+        <div>
+            <label class="block text-xs font-medium text-slate-600">รหัสวิชา (course_code) *</label>
+            <input type="text" name="course_code" placeholder="เช่น 04-00-101" required class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600">ชื่อรายวิชา (course_name) *</label>
+            <input type="text" name="course_name" placeholder="เช่น หลักการตลาด" required class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600">หมวดหมู่ (category)</label>
+            <input type="text" name="category" placeholder="เช่น หมวดวิชาแกน" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
             <div>
-                <label class="block text-xs font-medium text-slate-600">รหัสวิชา *</label>
-                <input type="text" name="code" placeholder="เช่น CS101" required class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-slate-600">ชื่อรายวิชา *</label>
-                <input type="text" name="name" placeholder="เช่น Programming I" required class="w-full px-3 py-1.5 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="block text-xs font-medium text-slate-600">หมวดหมู่</label>
-                    <select name="category" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
-                        <option value="วิชาบังคับ">วิชาบังคับ</option>
-                        <option value="วิชาเลือก">วิชาเลือก</option>
-                        <option value="หมวดศึกษาทั่วไป">หมวดศึกษาทั่วไป</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600">หน่วยกิต *</label>
-                    <input type="number" name="credits" min="1" max="6" value="3" required class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
-                </div>
+                <label class="block text-xs font-medium text-slate-600">สถาบัน (institution)</label>
+                <input type="text" name="institution" placeholder="เช่น ThaiMOOC" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
             </div>
             <div>
-                <label class="block text-xs font-medium text-slate-600">ผู้สอน</label>
-                <input type="text" name="instructor" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
+                <label class="block text-xs font-medium text-slate-600">หน่วยกิต (credits) *</label>
+                <input type="number" name="credits" min="1" max="6" value="3" required class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
             </div>
-            <div>
-                <label class="block text-xs font-medium text-slate-600">ภาคเรียน/ปีการศึกษา</label>
-                <input type="text" name="semester" placeholder="เช่น 1/2567" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-slate-600">คำอธิบาย</label>
-                <textarea name="description" rows="2" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none"></textarea>
-            </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium text-sm hover:bg-indigo-700 transition">บันทึกวิชา</button>
-        </form>
-    </div>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600">บทเรียนออนไลน์ (online_lesson)</label>
+            <input type="text" name="online_lesson" placeholder="ชื่อบทเรียนออนไลน์" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600">ชั่วโมงเรียน (hours)</label>
+            <input type="number" name="hours" placeholder="เช่น 10" class="w-full px-3 py-1.5 border rounded-lg text-sm outline-none">
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium text-sm hover:bg-indigo-700 transition">บันทึกข้อมูลลงฐานข้อมูล</button>
+    </form>
+</div>
 
     <!-- รายการวิชา -->
     <div class="md:col-span-2 space-y-4">
