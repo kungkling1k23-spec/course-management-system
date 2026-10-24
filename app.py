@@ -1,51 +1,49 @@
 import os
 import psycopg2
 import psycopg2.extras
-
-DATABASE_URL = os.environ.get('DATABASE_URL', 'ใส่ลิงก์เชื่อมต่อ PostgreSQL ของคุณที่นี่')
-
-def get_db():
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
-    return conn
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key-for-dev')
 
-DATABASE = 'course_app.db'
-
+# ใช้ PostgreSQL (รองรับ DBeaver และ Render) เพียงฟังก์ชันเดียวเท่านั้น
 def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
+    DATABASE_URL = os.environ.get('DATABASE_URL', 'ใส่ลิงก์เชื่อมต่อ PostgreSQL ของคุณที่นี่')
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
 def init_db():
-    with get_db() as conn:
-        cursor = conn.cursor()
-        # ตารางผู้ใช้งาน
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                fullname TEXT NOT NULL,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
-            )
-        ''')
-        # ตารางรายวิชา
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS courses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                code TEXT NOT NULL,
-                name TEXT NOT NULL,
-                category TEXT NOT NULL,
-                credits INTEGER NOT NULL,
-                instructor TEXT,
-                semester TEXT,
-                description TEXT,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-        ''')
-        conn.commit()
+    conn = get_db()
+    cursor = conn.cursor()
+    # สร้างตาราง user (ครอบด้วย "user" เพื่อไม่ให้ชนคำสงวนของ PostgreSQL)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS "user" (
+            id SERIAL PRIMARY KEY,
+            fullname VARCHAR(255) NOT NULL,
+            username VARCHAR(100) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL
+        )
+    ''')
+    # สร้างตาราง course
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS course (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES "user"(id),
+            course_code VARCHAR(50),
+            course_name VARCHAR(255),
+            category VARCHAR(100),
+            institution VARCHAR(100),
+            online_lesson TEXT,
+            hours INTEGER,
+            credits INTEGER
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True)
 
 # สร้าง Table เมื่อแอปเริ่มทำงาน
 init_db()
