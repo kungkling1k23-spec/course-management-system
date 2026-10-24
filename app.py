@@ -1,10 +1,9 @@
-import os
 import psycopg2
 import psycopg2.extras
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'ลิงก์เชื่อมต่อ PostgreSQL ของคุณ')
-
 def get_db():
+    # เปลี่ยนมาเชื่อมต่อผ่าน PostgreSQL (DBeaver / Render)
+    DATABASE_URL = os.environ.get('DATABASE_URL', 'ใส่ลิงก์เชื่อมต่อ PostgreSQL ของคุณที่นี่')
     conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
@@ -161,7 +160,7 @@ def add_course():
         # บันทึกข้อมูลลงตาราง course
         cursor.execute('''
             INSERT INTO course (user_id, course_code, course_name, category, institution, online_lesson, hours, credits)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (user_id, course_code, course_name, category, institution, online_lesson, hours, credits))
         
         conn.commit()
