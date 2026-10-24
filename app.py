@@ -1,210 +1,160 @@
 import os
-import psycopg2
-import psycopg2.extras
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, redirect, url_for, request, flash
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key-for-dev')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-super-secret-key')
 
-# ใช้ PostgreSQL (รองรับ DBeaver และ Render) เพียงฟังก์ชันเดียวเท่านั้น
-def get_db():
-    DATABASE_URL = os.environ.get('DATABASE_URL', 'ใส่ลิงก์เชื่อมต่อ PostgreSQL ของคุณที่นี่')
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
-    return conn
+# ตั้งค่า Database (รองรับทั้ง PostgreSQL บน Render และ SQLite สำหรับรันเทสบนเครื่อง)
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///courses.db')
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-def init_db():
-    conn = get_db()
-    cursor = conn.cursor()
-    # สร้างตาราง user (ครอบด้วย "user" เพื่อไม่ให้ชนคำสงวนของ PostgreSQL)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS "user" (
-            id SERIAL PRIMARY KEY,
-            fullname VARCHAR(255) NOT NULL,
-            username VARCHAR(100) UNIQUE NOT NULL,
-            password VARCHAR(255) NOT NULL
-        )
-    ''')
-    # สร้างตาราง course
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS course (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER REFERENCES "user"(id),
-            course_code VARCHAR(50),
-            course_name VARCHAR(255),
-            category VARCHAR(100),
-            institution VARCHAR(100),
-            online_lesson TEXT,
-            hours INTEGER,
-            credits INTEGER
-        )
-    ''')
-    conn.commit()
-    conn.close()
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# สร้าง Table เมื่อแอปเริ่มทำงาน
-init_db()
+db = SQLAlchemy(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
+# --- Database Models ---
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(256), nullable=False)
+    enrollments = db.relationship('Enrollment', backref='student', lazy=True)
+
+class Course(db.Model):
+    __tablename__ = 'courses'
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), unique=True, nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    credits = db.Column(db.Integer, nullable=False)
+    capacity = db.Column(db.Integer, nullable=False)
+    enrollments = db.relationship('Enrollment', backref='course_info', lazy=True)
+
+class Enrollment(db.Model):
+    __tablename__ = 'enrollments'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
+
+@login_manager.user_loader
+detailload_user(user_id):
+    return User.query.get(int(user_id))
+
+# --- Routes ---
 @app.route('/')
 def index():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    user_id = session['user_id']
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # ดึงรายวิชาของผู้ใช้ที่ล็อกอินอยู่
-    cursor.execute('SELECT * FROM courses WHERE user_id = ? ORDER BY id DESC', (user_id,))
-    courses = cursor.fetchall()
-    
-    # คำนวณสถิติ
-    total_courses = len(courses)
-    total_credits = sum(c['credits'] for c in courses)
-    required_count = sum(1 for c in courses if c['category'] == 'วิชาบังคับ')
-    elective_count = sum(1 for c in courses if c['category'] == 'วิชาเลือก')
-    
-    return render_template(
-        'dashboard.html', 
-        courses=courses, 
-        stats={
-            'total': total_courses,
-            'credits': total_credits,
-            'required': required_count,
-            'elective': elective_count
-        }
-    )
-
-# --- Authenication Routes ---
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password']
-        
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
-        user = cursor.fetchone()
-        
-        if user and check_password_hash(user['password'], password):
-            session['user_id'] = user['id']
-            session['fullname'] = user['fullname']
-            flash('เข้าสู่ระบบสำเร็จ', 'success')
-            return redirect(url_for('index'))
-        else:
-            flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
-            
-    return render_template('login.html')
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        fullname = request.form['fullname'].strip()
-        username = request.form['username'].strip()
-        password = request.form['password']
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
         
-        hashed_password = generate_password_hash(password)
-        
-        try:
-            conn = get_db()
-            cursor = conn.cursor()
-            cursor.execute(
-                'INSERT INTO users (fullname, username, password) VALUES (?, ?, ?)',
-                (fullname, username, hashed_password)
-            )
-            conn.commit()
-            flash('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ', 'success')
-            return redirect(url_for('login'))
-        except sqlite3.IntegrityError:
-            flash('ชื่อผู้ใช้งานนี้ถูกใช้ไปแล้ว', 'danger')
+        user_exists = User.query.filter_by(email=email).first()
+        if user_exists:
+            flash('อีเมลนี้ถูกใช้งาน, กรุณาใช้อีเมลอื่น', 'danger')
+            return redirect(url_for('register'))
             
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+        new_user = User(username=username, email=email, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        flash('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ', 'success')
+        return redirect(url_for('login'))
     return render_template('register.html')
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            return redirect(url_for('dashboard'))
+        else:
+            flash('อีเมลหรือรหัสผ่านไม่ถูกต้อง', 'danger')
+    return render_template('login.html')
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    all_courses = Course.query.all()
+    my_enrollments = Enrollment.query.filter_by(user_id=current_user.id).all()
+    enrolled_course_ids = [e.course_id for e in my_enrollments]
+    total_credits = sum(e.course_info.credits for e in my_enrollments)
+    
+    return render_template('dashboard.html', 
+                           courses=all_courses, 
+                           enrolled_ids=enrolled_course_ids, 
+                           my_enrollments=my_enrollments,
+                           total_credits=total_credits)
+
+@app.route('/add/<int:course_id>')
+@login_required
+def add_course(course_id):
+    existing = Enrollment.query.filter_by(user_id=current_user.id, course_id=course_id).first()
+    if not existing:
+        # เช็คหน่วยกิตรวมไม่ให้เกิน 22 หน่วยกิต
+        my_enrollments = Enrollment.query.filter_by(user_id=current_user.id).all()
+        current_credits = sum(e.course_info.credits for e in my_enrollments)
+        course_to_add = Course.query.get_or_404(course_id)
+        
+        if current_credits + course_to_add.credits > 22:
+            flash('ไม่สามารถเพิ่มรายวิชาได้ เนื่องจากหน่วยกิตรวมเกิน 22 หน่วยกิต', 'danger')
+        else:
+            new_enrollment = Enrollment(user_id=current_user.id, course_id=course_id)
+            db.session.add(new_enrollment)
+            db.session.commit()
+            flash('เพิ่มรายวิชาสำเร็จ!', 'success')
+            
+    return redirect(url_for('dashboard'))
+
+@app.route('/drop/<int:course_id>')
+@login_required
+def drop_course(course_id):
+    enrollment = Enrollment.query.filter_by(user_id=current_user.id, course_id=course_id).first()
+    if enrollment:
+        db.session.delete(enrollment)
+        db.session.commit()
+        flash('ถอนรายวิชาสำเร็จ', 'info')
+    return redirect(url_for('dashboard'))
+
 @app.route('/logout')
+@login_required
 def logout():
-    session.clear()
-    flash('ออกจากระบบเรียบร้อยแล้ว', 'info')
+    logout_user()
     return redirect(url_for('login'))
 
-# --- Course CRUD Routes ---
-
-@app.route('/course/add', methods=['POST'])
-def add_course():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-        
-    try:
-        user_id = session['user_id']
-        course_code = request.form.get('course_code', '').strip()
-        course_name = request.form.get('course_name', '').strip()
-        category = request.form.get('category', '').strip()
-        institution = request.form.get('institution', '').strip()
-        online_lesson = request.form.get('online_lesson', '').strip()
-        
-        # ป้องกันกรณีช่องตัวเลขเป็นค่าว่างแล้วแปลง int ไม่ผ่าน
-        hours_raw = request.form.get('hours', '0')
-        hours = int(hours_raw) if hours_raw.isdigit() else 0
-        
-        credits_raw = request.form.get('credits', '3')
-        credits = int(credits_raw) if credits_raw.isdigit() else 3
-        
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        # บันทึกข้อมูลลงตาราง course
-        cursor.execute('''
-            INSERT INTO course (user_id, course_code, course_name, category, institution, online_lesson, hours, credits)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (user_id, course_code, course_name, category, institution, online_lesson, hours, credits))
-        
-        conn.commit()
-        conn.close()
-        
-        flash('เพิ่มรายวิชาสำเร็จ', 'success')
-        return redirect(url_for('index'))
-        
-    except Exception as e:
-        # หากเกิดข้อผิดพลาด ระบบจะแสดง Error ออกมาทางหน้าจอเว็บชั่วคราวเพื่อให้เราอ่านเจอ
-        return f"เกิดข้อผิดพลาด (Error): {str(e)}"
-
-@app.route('/course/edit/<int:course_id>', methods=['POST'])
-def edit_course(course_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-        
-    code = request.form['code'].strip()
-    name = request.form['name'].strip()
-    category = request.form['category']
-    credits = int(request.form['credits'])
-    instructor = request.form.get('instructor', '').strip()
-    semester = request.form.get('semester', '').strip()
-    description = request.form.get('description', '').strip()
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        UPDATE courses 
-        SET code=?, name=?, category=?, credits=?, instructor=?, semester=?, description=?
-        WHERE id=? AND user_id=?
-    ''', (code, name, category, credits, instructor, semester, description, course_id, session['user_id']))
-    conn.commit()
-    
-    flash('แก้ไขข้อมูลวิชาเรียบร้อยแล้ว', 'success')
-    return redirect(url_for('index'))
-
-@app.route('/course/delete/<int:course_id>', methods=['POST'])
-def delete_course(course_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-        
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM courses WHERE id=? AND user_id=?', (course_id, session['user_id']))
-    conn.commit()
-    
-    flash('ลบรายวิชาเรียบร้อยแล้ว', 'info')
-    return redirect(url_for('index'))
+# ฟังก์ชันสร้างข้อมูลจำลองรายวิชาครั้งแรก (ถ้าฐานข้อมูลยังว่าง)
+def init_db():
+    with app.app_context():
+        db.create_all()
+        if Course.query.count() == 0:
+            sample_courses = [
+                Course(code="CS101", name="Introduction to Computer Science", credits=3, capacity=50),
+                Course(code="MATH201", name="Calculus for Engineers", credits=4, capacity=40),
+                Course(code="GEN111", name="Digital Literacy and Modern Life", credits=2, capacity=100),
+                Course(code="ENG102", name="English for Academic Purposes", credits=3, capacity=60),
+                Course(code="PHYS101", name="General Physics I", credits=4, capacity=45)
+            ]
+            db.session.bulk_save_objects(sample_courses)
+            db.session.commit()
 
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True)
