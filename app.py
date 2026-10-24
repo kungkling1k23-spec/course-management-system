@@ -135,29 +135,39 @@ def add_course():
     if 'user_id' not in session:
         return redirect(url_for('login'))
         
-    user_id = session['user_id']
-    course_code = request.form['course_code'].strip()
-    course_name = request.form['course_name'].strip()
-    category = request.form.get('category', '').strip()
-    institution = request.form.get('institution', '').strip()
-    
-    # 📌 รับค่าบทเรียนออนไลน์แบบข้อความอิสระ (พิมพ์ได้มากกว่า 1)
-    online_lesson = request.form.get('online_lesson', '').strip()
-    
-    hours = int(request.form['hours']) if request.form['hours'] else 0
-    credits = int(request.form['credits']) if request.form['credits'] else 0
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO course (user_id, course_code, course_name, category, institution, online_lesson, hours, credits)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-    ''', (user_id, course_code, course_name, category, institution, online_lesson, hours, credits))
-    conn.commit()
-    conn.close()
-    
-    flash('เพิ่มรายวิชาสำเร็จ', 'success')
-    return redirect(url_for('index'))
+    try:
+        user_id = session['user_id']
+        course_code = request.form.get('course_code', '').strip()
+        course_name = request.form.get('course_name', '').strip()
+        category = request.form.get('category', '').strip()
+        institution = request.form.get('institution', '').strip()
+        online_lesson = request.form.get('online_lesson', '').strip()
+        
+        # ป้องกันกรณีช่องตัวเลขเป็นค่าว่างแล้วแปลง int ไม่ผ่าน
+        hours_raw = request.form.get('hours', '0')
+        hours = int(hours_raw) if hours_raw.isdigit() else 0
+        
+        credits_raw = request.form.get('credits', '3')
+        credits = int(credits_raw) if credits_raw.isdigit() else 3
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # บันทึกข้อมูลลงตาราง course
+        cursor.execute('''
+            INSERT INTO course (user_id, course_code, course_name, category, institution, online_lesson, hours, credits)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (user_id, course_code, course_name, category, institution, online_lesson, hours, credits))
+        
+        conn.commit()
+        conn.close()
+        
+        flash('เพิ่มรายวิชาสำเร็จ', 'success')
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        # หากเกิดข้อผิดพลาด ระบบจะแสดง Error ออกมาทางหน้าจอเว็บชั่วคราวเพื่อให้เราอ่านเจอ
+        return f"เกิดข้อผิดพลาด (Error): {str(e)}"
 
 @app.route('/course/edit/<int:course_id>', methods=['POST'])
 def edit_course(course_id):
